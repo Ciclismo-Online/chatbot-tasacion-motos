@@ -1,0 +1,13 @@
+{
+  "name": "tasador-motos-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "functions-framework --target=chatbotTasadorHandler --port=8080"
+  },
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.3.0",
+    "undici": "^6.13.0"
+  }
+}
