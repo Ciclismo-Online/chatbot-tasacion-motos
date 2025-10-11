@@ -129,10 +129,11 @@
 
     // Resumen técnico
     if (valuation.resumen) {
-  // Si el resumen es objeto, lo mostramos formateado
+  // Si el resumen es objeto, lo mostramos formateado (pretty JSON).
   if (typeof valuation.resumen === "object") {
     resumenVal.textContent = JSON.stringify(valuation.resumen, null, 2);
   } else {
+    // Si es texto, lo mostramos tal cual.
     resumenVal.textContent = String(valuation.resumen);
   }
   show(resumenValWrapper);
