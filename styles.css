@@ -189,3 +189,19 @@ button[disabled]{ opacity:.6; cursor:not-allowed }
 @media (prefers-reduced-motion: reduce){
   *{ animation: none !important; transition: none !important; }
 }
+
+.user-friendly-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+.user-friendly-list li {
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+}
+.user-friendly-list li:last-child {
+  margin-bottom: 0;
+}
