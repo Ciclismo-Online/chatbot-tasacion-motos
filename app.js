@@ -129,13 +129,28 @@
 
     // Resumen técnico
     if (valuation.resumen) {
-  // Si el resumen es objeto, lo mostramos formateado (pretty JSON).
-  if (typeof valuation.resumen === "object") {
-    resumenVal.textContent = JSON.stringify(valuation.resumen, null, 2);
+  // Limpiamos el contenedor
+  resumenVal.innerHTML = "";
+
+  // Si el resumen es objeto, mostramos clave → valor de forma legible
+  if (typeof valuation.resumen === "object" && !Array.isArray(valuation.resumen)) {
+    const ul = document.createElement("ul");
+    ul.classList.add("user-friendly-list");
+
+    for (const [key, val] of Object.entries(valuation.resumen)) {
+      const li = document.createElement("li");
+      const label = key
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (l) => l.toUpperCase()); // capitaliza
+      li.textContent = `${label}: ${val}`;
+      ul.appendChild(li);
+    }
+    resumenVal.appendChild(ul);
   } else {
-    // Si es texto, lo mostramos tal cual.
+    // Si es texto simple, lo mostramos directamente
     resumenVal.textContent = String(valuation.resumen);
   }
+
   show(resumenValWrapper);
 }
 
