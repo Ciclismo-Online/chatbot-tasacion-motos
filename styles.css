@@ -205,3 +205,15 @@ button[disabled]{ opacity:.6; cursor:not-allowed }
 .user-friendly-list li:last-child {
   margin-bottom: 0;
 }
+
+/* Evita que los campos "empujen" el grid y se corten en móvil */
+.grid > * { min-width: 0; }     /* clave! */
+label { width: 100%; }
+input, textarea, select { width: 100%; max-width: 100%; }
+
+@media (max-width: 820px){
+  .grid { grid-template-columns: 1fr; }
+  .span-2 { grid-column: auto; }
+}
+
+.card { overflow: visible; }
