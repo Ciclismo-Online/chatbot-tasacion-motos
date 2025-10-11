@@ -2,7 +2,6 @@
   "name": "tasador-motos-backend",
   "version": "1.0.0",
   "main": "index.js",
-  "type": "commonjs",
   "scripts": {
     "start": "functions-framework --target=chatbotTasadorHandler --port=8080"
   },
