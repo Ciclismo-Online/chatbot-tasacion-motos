@@ -1,69 +1,85 @@
-// index.js — Chatbot Tasador de Motos (versión final)
-// Requisitos: OPENAI_API_KEY en variables o secretos
-// npm i @google-cloud/functions-framework undici
+// index.js — Tasador de Motos (con tool calling forzado)
+// Requisitos: OPENAI_API_KEY (secreto o variable)  |  ALLOWED_ORIGIN (dominio del frontend)
 
 const functions = require('@google-cloud/functions-framework');
 const { fetch } = require('undici');
 
-// Configuración
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Prompt especializado
+// Prompt (el texto puede ser libre; la estructura viene por tool_call)
 const SYSTEM_PROMPT = `
-Rol y Objetivo:
-Eres un tasador profesional de motocicletas que trabaja para una red de concesionarios multimarca en España.
-Calculas el valor de compra (trade-in) para el concesionario, no el precio entre particulares.
-
-Instrucciones de tasación:
-1) Normaliza marca, modelo, versión, año y kms.
-2) Estima un PVP de reventa medio en España.
-3) Aplica ajustes por kms y antigüedad.
-4) Calcula coste de reacondicionamiento (revisión, consumibles, neumáticos si procede).
-5) Aplica margen concesionario entre 20% y 35% según rotación/demanda/estado.
-6) Devuelve un precio de compra estimado para el concesionario.
-
-Formato de salida:
-- Primero, texto claro con:
-  • Resumen (marca, modelo, versión, año, kms)
-  • Análisis breve del mercado
-  • Desglose: PVP estimado, reacondicionamiento, margen
-  • Oferta de compra final (EUR)
-  • Nota: oferta sujeta a inspección física y documentación
-
-- Después, devuelve SOLO un bloque JSON válido con esta estructura EXACTA (sin usar etiquetas de código ni \`\`\`json\`\`\`):
-
-{
-  "resumen": { "marca": "", "modelo": "", "version": "", "ano": 0, "kms": 0 },
-  "estimaciones": {
-    "pvp_estimado": 0,
-    "ajuste_km": 0,
-    "ajuste_antiguedad": 0,
-    "coste_reacond": 0,
-    "margen_concesionario_pct": 0,
-    "margen_concesionario_eur": 0
-  },
-  "oferta_compra": 0,
-  "supuestos": { "estado": "", "extras": "", "provincia": "" },
-  "notas": ["..."]
-}
-
-Asegúrate de que todos los importes sean números (no strings) y que el JSON sea válido.
-No uses bloques de código ni etiquetas. Devuelve SOLO el objeto JSON, sin texto antes ni después.
+Eres un tasador profesional de motos para concesionario en España.
+Calculas el **precio de compra** (no de venta entre particulares).
+Haz un resumen claro (mercado, desglose y oferta final) y **luego** rellena la estructura solicitada.
+No inventes si faltan datos; asume valores razonables y anótalos en "notas".
 `;
 
-// Helper para construir el mensaje del usuario
-function buildUserMessageFromStruct(body) {
+// Schema del objeto de tasación (lo forzamos vía tool calling)
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "emitValuation",
+      description: "Devuelve la valoración estructurada para que el sistema la procese.",
+      parameters: {
+        type: "object",
+        properties: {
+          resumen: {
+            type: "object",
+            properties: {
+              marca: { type: "string" },
+              modelo: { type: "string" },
+              version: { type: "string" },
+              ano: { type: "number" },
+              kms: { type: "number" }
+            },
+            required: ["marca", "modelo", "version", "ano", "kms"]
+          },
+          estimaciones: {
+            type: "object",
+            properties: {
+              pvp_estimado: { type: "number" },
+              ajuste_km: { type: "number" },
+              ajuste_antiguedad: { type: "number" },
+              coste_reacond: { type: "number" },
+              margen_concesionario_pct: { type: "number" },
+              margen_concesionario_eur: { type: "number" }
+            },
+            required: [
+              "pvp_estimado",
+              "ajuste_km",
+              "ajuste_antiguedad",
+              "coste_reacond",
+              "margen_concesionario_pct",
+              "margen_concesionario_eur"
+            ]
+          },
+          oferta_compra: { type: "number" },
+          supuestos: {
+            type: "object",
+            properties: {
+              estado: { type: "string" },
+              extras: { type: "string" },
+              provincia: { type: "string" }
+            },
+            required: ["estado", "extras", "provincia"]
+          },
+          notas: { type: "array", items: { type: "string" } }
+        },
+        required: ["resumen", "estimaciones", "oferta_compra", "supuestos", "notas"],
+        additionalProperties: false
+      }
+    }
+  }
+];
+
+// Mensaje de usuario a partir del body
+function buildUserMessage(body = {}) {
   const {
-    marca = '',
-    modelo = '',
-    version = '',
-    ano = '',
-    kms = '',
-    estado = '',
-    extras = '',
-    provincia = ''
-  } = body || {};
+    marca = "", modelo = "", version = "",
+    ano = "", kms = "", estado = "", extras = "", provincia = ""
+  } = body;
 
   return `
 Tasación solicitada:
@@ -76,66 +92,52 @@ Tasación solicitada:
 - Extras: ${extras}
 - Provincia: ${provincia}
 
-Devuélveme la valoración siguiendo exactamente el formato pedido (texto + JSON).
+Instrucciones:
+1) Escribe un texto breve para el cliente con: resumen, análisis de mercado, desglose y oferta final (EUR).
+2) A continuación, **rellena la función emitValuation** con números (no strings) y euros como enteros/decimales.
 `.trim();
 }
 
-// 🔍 Función para extraer el JSON del texto del modelo
+// Fallback: intentar extraer JSON si no hubiese tool call (no debería pasar)
 function extractJSON(text) {
   if (typeof text !== "string") return null;
-
-  // 1️⃣ Elimina cualquier bloque de código tipo ```json ... ```
   let cleaned = text.replace(/```(?:json)?/gi, "").replace(/```/g, "");
-
-  // 2️⃣ Busca el último objeto JSON válido
   const start = cleaned.lastIndexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start === -1 || end === -1 || end < start) return null;
-
-  const jsonCandidate = cleaned.slice(start, end + 1).trim();
-
-  // 3️⃣ Intenta parsear
-  try {
-    return JSON.parse(jsonCandidate);
-  } catch {
-    // 4️⃣ Si falla, intenta corregir saltos de línea o comillas
+  const candidate = cleaned.slice(start, end + 1).trim();
+  try { return JSON.parse(candidate); } catch {
     try {
-      const fixed = jsonCandidate
+      const fixed = candidate
         .replace(/\r?\n|\r/g, " ")
         .replace(/\s{2,}/g, " ")
         .replace(/“|”/g, '"');
       return JSON.parse(fixed);
-    } catch {
-      console.warn("⚠️ No se pudo parsear JSON de la respuesta del modelo.");
-      return null;
-    }
+    } catch { return null; }
   }
 }
 
-
-// 🧠 Función principal HTTP
 functions.http('chatbotTasadorHandler', async (req, res) => {
-  // Configurar CORS
+  // CORS
   res.set('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(204).send('');
 
   try {
-    if (!OPENAI_API_KEY) throw new Error('Falta la variable OPENAI_API_KEY.');
+    if (!OPENAI_API_KEY) throw new Error('Falta OPENAI_API_KEY.');
 
-    const { chatHistory, ...body } = req.body || {};
+    const { chatHistory, ...payload } = req.body || {};
     const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
 
-    if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+    if (Array.isArray(chatHistory) && chatHistory.length) {
       messages.push(...chatHistory);
     } else {
-      const userContent = buildUserMessageFromStruct(body);
-      messages.push({ role: 'user', content: userContent });
+      messages.push({ role: 'user', content: buildUserMessage(payload) });
     }
 
-    // Llamada a OpenAI
-    const completion = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Llamada a OpenAI forzando tool_call a "emitValuation"
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
@@ -144,31 +146,41 @@ functions.http('chatbotTasadorHandler', async (req, res) => {
       body: JSON.stringify({
         model: 'gpt-4o',
         temperature: 0.3,
-        max_tokens: 900,
-        messages
+        max_tokens: 1000,
+        messages,
+        tools,
+        tool_choice: { type: "function", function: { name: "emitValuation" } }
       })
     });
 
-    const data = await completion.json();
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data?.error?.message || `HTTP ${resp.status}`);
 
-    if (!completion.ok) {
-      throw new Error(data?.error?.message || `Error HTTP ${completion.status}`);
+    const msg = data?.choices?.[0]?.message || {};
+    const responseText = (msg.content || "").toString();
+
+    // 1) Preferimos la tool call (estructurado garantizado)
+    let valuation = null;
+    const tc = msg.tool_calls?.[0];
+    if (tc?.function?.name === 'emitValuation' && tc?.function?.arguments) {
+      try {
+        valuation = JSON.parse(tc.function.arguments);
+      } catch (e) {
+        // Si por lo que sea viniese mal formateado, fallback a extractor
+        valuation = extractJSON(tc.function.arguments);
+      }
     }
 
-    const content = data?.choices?.[0]?.message?.content || '';
-    const valuation = extractJSON(content);
+    // 2) Fallback: intentar sacar JSON del texto
+    if (!valuation) valuation = extractJSON(responseText);
 
     res.status(200).send({
       success: true,
-      responseText: content,
+      responseText,
       valuation: valuation || null
     });
   } catch (err) {
-    console.error('❌ Error en chatbotTasadorHandler:', err.message);
-    res.status(500).send({
-      success: false,
-      error: 'SERVER_ERROR',
-      message: err.message
-    });
+    console.error('Tasador ERROR:', err);
+    res.status(500).send({ success: false, error: 'SERVER_ERROR', message: err.message });
   }
 });
