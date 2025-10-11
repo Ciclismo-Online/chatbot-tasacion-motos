@@ -1,22 +1,23 @@
-// index.js — Chatbot Tasador de Motos (MVP, sin BD)
-// Requisitos: OPENAI_API_KEY en variables de entorno
-// npm scripts: "start": "functions-framework --target=chatbotTasadorHandler --port=8080"
+// index.js — Chatbot Tasador de Motos (versión final)
+// Requisitos: OPENAI_API_KEY en variables o secretos
+// npm i @google-cloud/functions-framework undici
 
 const functions = require('@google-cloud/functions-framework');
 const { fetch } = require('undici');
 
+// Configuración
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Prompt profesional (concesionario en España)
+// Prompt especializado
 const SYSTEM_PROMPT = `
 Rol y Objetivo:
-Eres un tasador de motocicletas profesional que trabaja para una red de concesionarios multimarca en España.
-Calculas el valor de compra (trade-in) para un concesionario, no el precio entre particulares.
+Eres un tasador profesional de motocicletas que trabaja para una red de concesionarios multimarca en España.
+Calculas el valor de compra (trade-in) para el concesionario, no el precio entre particulares.
 
 Instrucciones de tasación:
 1) Normaliza marca, modelo, versión, año y kms.
-2) Estima un PVP de reventa medio en España (orientativo).
+2) Estima un PVP de reventa medio en España.
 3) Aplica ajustes por kms y antigüedad.
 4) Calcula coste de reacondicionamiento (revisión, consumibles, neumáticos si procede).
 5) Aplica margen concesionario entre 20% y 35% según rotación/demanda/estado.
@@ -29,7 +30,9 @@ Formato de salida:
   • Desglose: PVP estimado, reacondicionamiento, margen
   • Oferta de compra final (EUR)
   • Nota: oferta sujeta a inspección física y documentación
-- Después, SOLO un bloque JSON válido:
+
+- Después, devuelve SOLO un bloque JSON válido con esta estructura EXACTA (sin usar etiquetas de código ni \`\`\`json\`\`\`):
+
 {
   "resumen": { "marca": "", "modelo": "", "version": "", "ano": 0, "kms": 0 },
   "estimaciones": {
@@ -44,55 +47,109 @@ Formato de salida:
   "supuestos": { "estado": "", "extras": "", "provincia": "" },
   "notas": ["..."]
 }
-Asegúrate de que el JSON sea válido y todos los importes estén en número (EUR).
+
+Asegúrate de que todos los importes sean números (no strings) y que el JSON sea válido.
+No uses bloques de código ni etiquetas. Devuelve SOLO el objeto JSON, sin texto antes ni después.
 `;
 
+// Helper para construir el mensaje del usuario
+function buildUserMessageFromStruct(body) {
+  const {
+    marca = '',
+    modelo = '',
+    version = '',
+    ano = '',
+    kms = '',
+    estado = '',
+    extras = '',
+    provincia = ''
+  } = body || {};
+
+  return `
+Tasación solicitada:
+- Marca: ${marca}
+- Modelo: ${modelo}
+- Versión: ${version}
+- Año: ${ano}
+- Kilómetros: ${kms}
+- Estado: ${estado}
+- Extras: ${extras}
+- Provincia: ${provincia}
+
+Devuélveme la valoración siguiendo exactamente el formato pedido (texto + JSON).
+`.trim();
+}
+
+// 🔍 Función para extraer el JSON del texto del modelo
+function extractJSON(text) {
+  if (typeof text !== 'string') return null;
+
+  // Si el modelo devolvió un bloque de código ```json ... ```
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  let candidate = fenced ? fenced[1] : text;
+
+  // Buscar el último objeto JSON { ... }
+  const start = candidate.lastIndexOf('{');
+  const end = candidate.lastIndexOf('}');
+  if (start === -1 || end === -1 || end < start) return null;
+
+  const jsonStr = candidate.slice(start, end + 1).trim();
+
+  try {
+    return JSON.parse(jsonStr);
+  } catch {
+    try {
+      const compact = jsonStr.replace(/\r?\n/g, ' ');
+      return JSON.parse(compact);
+    } catch {
+      return null;
+    }
+  }
+}
+
+// 🧠 Función principal HTTP
 functions.http('chatbotTasadorHandler', async (req, res) => {
-  // CORS
+  // Configurar CORS
   res.set('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(204).send('');
 
   try {
-    if (!OPENAI_API_KEY) throw new Error('Falta OPENAI_API_KEY en variables de entorno.');
+    if (!OPENAI_API_KEY) throw new Error('Falta la variable OPENAI_API_KEY.');
 
-    const { chatHistory, marca, modelo, version, ano, kms, estado, extras, provincia } = req.body || {};
-
-    // Construimos mensajes: o chatHistory, o entrada estructurada
+    const { chatHistory, ...body } = req.body || {};
     const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
 
-    if (Array.isArray(chatHistory) && chatHistory.length) {
+    if (Array.isArray(chatHistory) && chatHistory.length > 0) {
       messages.push(...chatHistory);
     } else {
-      const user = `
-Tasación solicitada:
-- Marca: ${marca ?? ''}
-- Modelo: ${modelo ?? ''}
-- Versión: ${version ?? ''}
-- Año: ${ano ?? ''}
-- Kilómetros: ${kms ?? ''}
-- Estado: ${estado ?? ''}
-- Extras: ${extras ?? ''}
-- Provincia: ${provincia ?? ''}
-
-Devuélveme la valoración siguiendo exactamente el formato pedido (texto + JSON).
-`.trim();
-      messages.push({ role: 'user', content: user });
+      const userContent = buildUserMessageFromStruct(body);
+      messages.push({ role: 'user', content: userContent });
     }
 
     // Llamada a OpenAI
     const completion = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'gpt-4o', temperature: 0.3, max_tokens: 900, messages })
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        temperature: 0.3,
+        max_tokens: 900,
+        messages
+      })
     });
+
     const data = await completion.json();
-    if (!completion.ok) throw new Error(data?.error?.message || `HTTP ${completion.status}`);
+
+    if (!completion.ok) {
+      throw new Error(data?.error?.message || `Error HTTP ${completion.status}`);
+    }
 
     const content = data?.choices?.[0]?.message?.content || '';
-
-    // Intentamos extraer el último bloque JSON de la respuesta
     const valuation = extractJSON(content);
 
     res.status(200).send({
@@ -100,17 +157,12 @@ Devuélveme la valoración siguiendo exactamente el formato pedido (texto + JSON
       responseText: content,
       valuation: valuation || null
     });
-  } catch (e) {
-    console.error('Error:', e?.message);
-    res.status(500).send({ success: false, error: 'SERVER_ERROR', message: e?.message || 'Error desconocido' });
+  } catch (err) {
+    console.error('❌ Error en chatbotTasadorHandler:', err.message);
+    res.status(500).send({
+      success: false,
+      error: 'SERVER_ERROR',
+      message: err.message
+    });
   }
 });
-
-// Extrae el último bloque JSON de un texto
-function extractJSON(text) {
-  if (typeof text !== 'string') return null;
-  const open = text.lastIndexOf('{');
-  const close = text.lastIndexOf('}');
-  if (open === -1 || close === -1 || close < open) return null;
-  try { return JSON.parse(text.slice(open, close + 1)); } catch { return null; }
-}
