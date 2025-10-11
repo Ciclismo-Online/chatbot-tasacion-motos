@@ -129,9 +129,14 @@
 
     // Resumen técnico
     if (valuation.resumen) {
-      resumenVal.textContent = valuation.resumen;
-      show(resumenValWrapper);
-    }
+  // Si el resumen es objeto, lo mostramos formateado
+  if (typeof valuation.resumen === "object") {
+    resumenVal.textContent = JSON.stringify(valuation.resumen, null, 2);
+  } else {
+    resumenVal.textContent = String(valuation.resumen);
+  }
+  show(resumenValWrapper);
+}
 
     // Estimaciones (mínimo, medio, máximo, u otras claves)
     if (valuation.estimaciones && typeof valuation.estimaciones === "object") {
