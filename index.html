@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tasación de motos — Demo</title>
+  <meta name="description" content="Formulario para obtener una tasación estimada de tu moto, usando un backend en Cloud Run." />
+  <!-- Metadato opcional: permite a app.js leer la URL del backend desde el HTML -->
+  <meta name="tasador-endpoint" content="https://chatbotasadorhandler-129026765593.europe-west1.run.app" />
+
+  <!-- Hoja de estilos (la crearemos en el siguiente paso) -->
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>🛵 Tasación de motos</h1>
+    <p class="subtitle">Introduce los datos y obtén una estimación. No guardamos información personal.</p>
+  </header>
+
+  <main class="container">
+    <!-- FORMULARIO -->
+    <section class="card">
+      <h2>Datos de la moto</h2>
+
+      <!--
+        Importante: el id y los name de cada campo coinciden con lo que espera el backend.
+        Añadimos data-endpoint como respaldo (app.js puede leerlo si lo prefieres).
+      -->
+      <form id="tasacion-form"
+            data-endpoint="https://chatbotasadorhandler-129026765593.europe-west1.run.app"
+            autocomplete="on">
+        <div class="grid">
+          <label>
+            <span>Marca *</span>
+            <input name="marca" id="marca" required placeholder="Ej: Honda" />
+          </label>
+
+          <label>
+            <span>Modelo *</span>
+            <input name="modelo" id="modelo" required placeholder="Ej: CB500F" />
+          </label>
+
+          <label>
+            <span>Versión *</span>
+            <input name="version" id="version" required placeholder="Ej: 2020 ABS" />
+          </label>
+
+          <label>
+            <span>Año *</span>
+            <input name="ano" id="ano" type="number" inputmode="numeric" min="1980" max="2099" step="1" required placeholder="Ej: 2020" />
+          </label>
+
+          <label>
+            <span>Kilómetros *</span>
+            <input name="kms" id="kms" type="number" inputmode="numeric" min="0" step="1" required placeholder="Ej: 15000" />
+          </label>
+
+          <label class="span-2">
+            <span>Estado (opcional)</span>
+            <textarea name="estado" id="estado" rows="2" placeholder="Ej: Buen estado, revisiones al día…"></textarea>
+          </label>
+
+          <label class="span-2">
+            <span>Extras (opcional)</span>
+            <textarea name="extras" id="extras" rows="2" placeholder="Ej: Top case, puños calefactables…"></textarea>
+          </label>
+
+          <label class="span-2">
+            <span>Provincia (opcional)</span>
+            <input name="provincia" id="provincia" placeholder="Ej: Madrid" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="submitBtn" type="submit">Calcular tasación</button>
+        </div>
+
+        <!-- Área de estado accesible -->
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <!-- RESULTADO -->
+    <section id="resultado" class="card" hidden>
+      <h2>Resultado</h2>
+
+      <!-- Resumen textual libre que pueda devolver el backend -->
+      <article id="textoPanel">
+        <h3>Resumen</h3>
+        <pre id="responseText" class="pre"></pre>
+      </article>
+
+      <!-- Oferta destacada si llega en valuation.oferta_compra -->
+      <article id="offerCard" class="offer" hidden>
+        <h3>Oferta de compra</h3>
+        <p id="offerValue"></p>
+        <p id="offerNotes" class="muted"></p>
+      </article>
+
+      <!-- Estructura valuation -->
+      <article id="valuationPanel">
+        <h3>Detalle estructurado</h3>
+
+        <div id="resumenValWrapper" hidden>
+          <h4>Resumen técnico</h4>
+          <p id="resumenVal"></p>
+        </div>
+
+        <div id="estimacionesWrapper" hidden>
+          <h4>Estimaciones</h4>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>Notas</th>
+              </tr>
+            </thead>
+            <tbody id="estimationsBody">
+              <!-- app.js insertará filas aquí -->
+            </tbody>
+          </table>
+        </div>
+
+        <div id="supuestosWrapper" hidden>
+          <h4>Supuestos</h4>
+          <ul id="supuestosList"></ul>
+        </div>
+
+        <div id="notasWrapper" hidden>
+          <h4>Notas</h4>
+          <ul id="notasList"></ul>
+        </div>
+      </article>
+
+      <!-- Copiar resultado (opcional, lo conectaremos en app.js) -->
+      <div class="actions">
+        <button id="copyJsonBtn" type="button">Copiar JSON</button>
+        <button id="copyTextBtn" type="button">Copiar texto</button>
+      </div>
+    </section>
+
+    <!-- Área de errores globales -->
+    <section id="errorBox" class="card error" hidden>
+      <h2>Error</h2>
+      <p id="errorMessage"></p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <small>© <span id="year"></span> Tasador demo — GitHub Pages</small>
+  </footer>
+
+  <!-- Script principal (lo crearemos en el siguiente paso). 'defer' para cargar al final. -->
+  <script src="./app.js" defer></script>
+
+  <!-- Pequeño script inline: solo para año del footer, no toca la lógica de negocio -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const y = document.getElementById('year');
+      if (y) y.textContent = new Date().getFullYear();
+    });
+  </script>
+</body>
+</html>
