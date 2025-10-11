@@ -82,30 +82,36 @@ Devuélveme la valoración siguiendo exactamente el formato pedido (texto + JSON
 
 // 🔍 Función para extraer el JSON del texto del modelo
 function extractJSON(text) {
-  if (typeof text !== 'string') return null;
+  if (typeof text !== "string") return null;
 
-  // Si el modelo devolvió un bloque de código ```json ... ```
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  let candidate = fenced ? fenced[1] : text;
+  // 1️⃣ Elimina cualquier bloque de código tipo ```json ... ```
+  let cleaned = text.replace(/```(?:json)?/gi, "").replace(/```/g, "");
 
-  // Buscar el último objeto JSON { ... }
-  const start = candidate.lastIndexOf('{');
-  const end = candidate.lastIndexOf('}');
+  // 2️⃣ Busca el último objeto JSON válido
+  const start = cleaned.lastIndexOf("{");
+  const end = cleaned.lastIndexOf("}");
   if (start === -1 || end === -1 || end < start) return null;
 
-  const jsonStr = candidate.slice(start, end + 1).trim();
+  const jsonCandidate = cleaned.slice(start, end + 1).trim();
 
+  // 3️⃣ Intenta parsear
   try {
-    return JSON.parse(jsonStr);
+    return JSON.parse(jsonCandidate);
   } catch {
+    // 4️⃣ Si falla, intenta corregir saltos de línea o comillas
     try {
-      const compact = jsonStr.replace(/\r?\n/g, ' ');
-      return JSON.parse(compact);
+      const fixed = jsonCandidate
+        .replace(/\r?\n|\r/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .replace(/“|”/g, '"');
+      return JSON.parse(fixed);
     } catch {
+      console.warn("⚠️ No se pudo parsear JSON de la respuesta del modelo.");
       return null;
     }
   }
 }
+
 
 // 🧠 Función principal HTTP
 functions.http('chatbotTasadorHandler', async (req, res) => {
