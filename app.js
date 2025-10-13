@@ -318,6 +318,17 @@ estimationsBody.appendChild(tr);
       // Render del objeto estructurado
       renderValuation(data.valuation);
 
+       // --- Scroll automático al resultado ---
+if (resultado) {
+  // Espera un pequeño retardo para asegurar que el contenido ya se pintó
+  setTimeout(() => {
+    resultado.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Foco al título para accesibilidad
+    const title = resultado.querySelector("h2");
+    if (title) title.focus();
+  }, 200);
+}
+
       setStatus("Listo.");
       hide(errorBox);
     } catch (err) {
