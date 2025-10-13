@@ -134,6 +134,9 @@ button[disabled]{ opacity:.6; cursor:not-allowed }
   overflow:auto;
   font-family: var(--mono);
   font-size: 0.9rem;
+  white-space: pre-wrap;     /* ✅ envuelve líneas largas */
+  word-break: break-word;    /* ✅ corta palabras larguísimas si hace falta */
+  overflow-wrap: anywhere;   /* ✅ último seguro */
 }
 
 .offer{
