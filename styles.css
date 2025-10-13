@@ -243,4 +243,37 @@ input, textarea, select { width: 100%; max-width: 100%; }
   white-space: nowrap;            /* evita saltos; si prefieres que rompa línea, elimina esta regla */
 }
 
+/* ===== Tabla: modo móvil sin scroll y más legible ===== */
+@media (max-width: 640px){
+  /* El contenedor deja de forzar scroll horizontal */
+  .table-wrap{
+    overflow-x: visible;
+  }
+
+  /* La tabla se adapta al ancho disponible */
+  .table{
+    min-width: 0;              /* anula el min-width: 420px */
+    table-layout: fixed;       /* reparte columnas de forma estable */
+    width: 100%;
+  }
+
+  /* Permite saltos de línea y cortes seguros */
+  .table thead th,
+  .table tbody td{
+    white-space: normal;       /* antes: nowrap */
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  /* Anchos 60%/40% y valor a la derecha */
+  .table thead th:first-child,
+  .table tbody td:first-child{
+    width: 60%;
+  }
+  .table thead th:last-child,
+  .table tbody td:last-child{
+    width: 40%;
+    text-align: right;
+  }
+}
 
