@@ -176,16 +176,14 @@
           }
 
           const tr = document.createElement("tr");
-          const tdTipo = document.createElement("td");
-          const tdValor = document.createElement("td");
-          const tdNotas = document.createElement("td");
-          tdTipo.textContent = tipo;
-          tdValor.textContent = valorStr || "-";
-          tdNotas.textContent = notas || "";
-          tr.appendChild(tdTipo);
-          tr.appendChild(tdValor);
-          tr.appendChild(tdNotas);
-          estimationsBody.appendChild(tr);
+const tdTipo = document.createElement("td");
+const tdValor = document.createElement("td");
+tdTipo.textContent = tipo;
+tdValor.textContent = valorStr || "-";
+tr.appendChild(tdTipo);
+tr.appendChild(tdValor);
+estimationsBody.appendChild(tr);
+
         }
         show(estimacionesWrapper);
       }
