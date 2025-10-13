@@ -220,3 +220,25 @@ input, textarea, select { width: 100%; max-width: 100%; }
 }
 
 .card { overflow: visible; }
+
+/* --- Tabla responsive en móvil --- */
+.table-wrap{
+  overflow-x: auto;               /* ✅ scroll horizontal si la pantalla es estrecha */
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #0f1520;
+}
+
+.table{
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;               /* ✅ evita que las columnas se aplasten */
+  border: none;                   /* el borde ya lo lleva .table-wrap */
+}
+
+.table thead th,
+.table tbody td{
+  white-space: nowrap;            /* ✅ mantiene cada celda en una línea */
+}
+
