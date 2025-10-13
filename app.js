@@ -202,7 +202,7 @@ function prettifyKey(k = "") {
           const tr = document.createElement("tr");
 const tdTipo = document.createElement("td");
 const tdValor = document.createElement("td");
-tdTipo.textContent = tipo;
+tdTipo.textContent = prettifyKey(tipo);
 tdValor.textContent = valorStr || "-";
 tr.appendChild(tdTipo);
 tr.appendChild(tdValor);
