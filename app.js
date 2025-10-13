@@ -27,6 +27,30 @@
   const show = (el) => el && el.removeAttribute("hidden");
   const hide = (el) => el && el.setAttribute("hidden", "");
 
+   // Convierte claves técnicas en etiquetas legibles
+function prettifyKey(k = "") {
+  if (!k) return "";
+  let s = String(k).trim();
+
+  // Sufijos conocidos -> paréntesis
+  const pct = s.endsWith("_pct");
+  const eur = s.endsWith("_eur");
+  if (pct) s = s.replace(/_pct$/, "");
+  if (eur) s = s.replace(/_eur$/, "");
+
+  // Guiones bajos -> espacios
+  s = s.replace(/_/g, " ");
+
+  // Capitaliza cada palabra
+  s = s.replace(/\b\w/g, (m) => m.toUpperCase());
+
+  // Añade sufijos legibles
+  if (pct) s += " (%)";
+  if (eur) s += " (EUR)";
+
+  return s;
+}
+
   // ---------- Obtención del endpoint ----------
   function getEndpoint() {
     // Prioridad 1: atributo data-endpoint del formulario
