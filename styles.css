@@ -294,3 +294,9 @@ input, textarea, select { width: 100%; max-width: 100%; }
   }
 }
 
+/* Evita borde de foco visible al hacer scroll automático */
+h2:focus {
+  outline: none;
+}
+
+
