@@ -272,6 +272,13 @@ estimationsBody.appendChild(tr);
       renderValuation(null);
       show(errorBox);
       errorMessage.textContent = errs.join(" ");
+       // --- Scroll automático al cuadro de error ---
+setTimeout(() => {
+  errorBox.scrollIntoView({ behavior: "smooth", block: "start" });
+  const title = errorBox.querySelector("h2");
+  if (title) title.focus();
+}, 200);
+
       setStatus("Corrige los errores del formulario.");
       return;
     }
