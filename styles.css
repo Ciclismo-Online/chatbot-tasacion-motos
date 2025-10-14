@@ -299,4 +299,53 @@ h2:focus {
   outline: none;
 }
 
+/* ===== Modo impresión (PDF) ===== */
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm; /* margen cómodo para impresoras */
+  }
+
+  /* Mejor fidelidad de colores en PDF */
+  html, body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Oculta todo lo que no es el resultado y evita botones */
+  #tasacion-form,
+  .actions,         /* oculta botones (incluye "Descargar PDF") */
+  #errorBox {
+    display: none !important;
+  }
+
+  /* Mantén header, resultado y footer para un PDF completo */
+  .card {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .container {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Garantiza que el resultado se imprime aunque el layout cambie */
+  #resultado {
+    display: block !important;
+  }
+
+  /* Tabla más compacta en PDF */
+  .table {
+    min-width: 0 !important;
+    table-layout: fixed !important;
+    width: 100% !important;
+  }
+  .table-wrap {
+    border: none !important;
+    background: transparent !important;
+  }
+}
 
