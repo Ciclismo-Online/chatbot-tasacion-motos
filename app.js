@@ -79,6 +79,8 @@ function prettifyKey(k = "") {
   const resultado = $("#resultado");
   const errorBox = $("#errorBox");
   const errorMessage = $("#errorMessage");
+  const printBtn = $("#printBtn");
+ 
 
   const responseTextEl = $("#responseText");
   const offerCard = $("#offerCard");
