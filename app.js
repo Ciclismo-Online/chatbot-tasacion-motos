@@ -356,33 +356,11 @@ if (resultado) {
     }
   });
 
-  // ---------- Botones de copiado ----------
-  copyJsonBtn?.addEventListener("click", () => {
-    // Construimos un objeto con lo mostrábamos (si quieres, podrías guardar el último 'data' globalmente)
-    const rows = $$("#estimationsBody tr").map((tr) => {
-      const tds = tr.querySelectorAll("td");
-      return {
-        tipo: tds[0]?.textContent || "",
-        valor: tds[1]?.textContent || "",
-        notas: tds[2]?.textContent || ""
-      };
-    });
+  // --- Botón "Descargar PDF" ---
+const printBtn = $("#printBtn");
 
-    const obj = {
-      resumenTexto: responseTextEl.textContent || "",
-      oferta: offerCard.hasAttribute("hidden")
-        ? null
-        : (offerValue.textContent || "").trim(),
-      estimaciones: rows,
-      supuestos: $$("#supuestosList li").map((li) => li.textContent),
-      notas: $$("#notasList li").map((li) => li.textContent)
-    };
+printBtn?.addEventListener("click", () => {
+  window.print();
+});
 
-    copyToClipboard(JSON.stringify(obj, null, 2));
-  });
-
-  copyTextBtn?.addEventListener("click", () => {
-    const texto = responseTextEl.textContent?.trim() || "";
-    copyToClipboard(texto || "Sin texto disponible.");
-  });
 })();
