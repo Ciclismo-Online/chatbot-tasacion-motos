@@ -190,40 +190,52 @@ function prettifyKey(k = "") {
   show(resumenValWrapper);
 }
 
-    // Estimaciones (mínimo, medio, máximo, u otras claves)
-    if (valuation.estimaciones && typeof valuation.estimaciones === "object") {
-      const entries = Object.entries(valuation.estimaciones);
-      if (entries.length) {
-        for (const [tipo, info] of entries) {
-          // info puede ser número o objeto { valor, notas } o { min, max }
-          let valorStr = "";
-          let notas = "";
+   // Estimaciones (mínimo, medio, máximo, u otras claves)
+if (valuation.estimaciones && typeof valuation.estimaciones === "object") {
+  const entries = Object.entries(valuation.estimaciones);
+  if (entries.length) {
+    for (const [tipo, info] of entries) {
+      // info puede ser número o objeto { valor, notas } o { min, max }
+      let valorStr = "";
 
-          if (typeof info === "number") {
-            valorStr = formatMoney(info);
-          } else if (info && typeof info === "object") {
-            if ("valor" in info) valorStr = formatMoney(info.valor);
-            else if ("min" in info || "max" in info) {
-              const min = "min" in info ? formatMoney(info.min) : "";
-              const max = "max" in info ? formatMoney(info.max) : "";
-              valorStr = `${min}${min && max ? " – " : ""}${max}`;
-            }
-            if (info.notas) notas = String(info.notas);
-          }
+      const isPct   = typeof tipo === "string" && tipo.endsWith("_pct"); // ej: margen_concesionario_pct
+      const isCoste = tipo === "coste_reacond";                           // mostrar negativo
 
-          const tr = document.createElement("tr");
-const tdTipo = document.createElement("td");
-const tdValor = document.createElement("td");
-tdTipo.textContent = prettifyKey(tipo);
-tdValor.textContent = valorStr || "-";
-tr.appendChild(tdTipo);
-tr.appendChild(tdValor);
-estimationsBody.appendChild(tr);
+      const fmtPct = (n) => `${Number(n)}%`;
+      const fmtCosteNeg = (n) => `-${formatMoney(Math.abs(Number(n)))}`;
 
+      if (typeof info === "number") {
+        if (isPct)        valorStr = fmtPct(info);        // ✅ "10%"
+        else if (isCoste) valorStr = fmtCosteNeg(info);   // ✅ "-250 €"
+        else              valorStr = formatMoney(info);   // resto en €
+      } else if (info && typeof info === "object") {
+        if ("valor" in info) {
+          if (isPct)        valorStr = fmtPct(info.valor);
+          else if (isCoste) valorStr = fmtCosteNeg(info.valor);
+          else              valorStr = formatMoney(info.valor);
+        } else if ("min" in info || "max" in info) {
+          const min = "min" in info
+            ? (isPct ? fmtPct(info.min) : isCoste ? fmtCosteNeg(info.min) : formatMoney(info.min))
+            : "";
+          const max = "max" in info
+            ? (isPct ? fmtPct(info.max) : isCoste ? fmtCosteNeg(info.max) : formatMoney(info.max))
+            : "";
+          valorStr = `${min}${min && max ? " – " : ""}${max}`;
         }
-        show(estimacionesWrapper);
       }
+
+      const tr = document.createElement("tr");
+      const tdTipo = document.createElement("td");
+      const tdValor = document.createElement("td");
+      tdTipo.textContent = prettifyKey(tipo);   // ← ya pone "(%)" o "(EUR)" en la etiqueta
+      tdValor.textContent = valorStr || "-";
+      tr.appendChild(tdTipo);
+      tr.appendChild(tdValor);
+      estimationsBody.appendChild(tr);
     }
+    show(estimacionesWrapper);
+  }
+}
 
     // Supuestos
     if (Array.isArray(valuation.supuestos) && valuation.supuestos.length) {
