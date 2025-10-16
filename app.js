@@ -362,5 +362,10 @@ printBtn?.addEventListener("click", () => {
   window.print();
 });
 
+   // --- Botón "Nueva tasación" (recarga como F5) ---
+reloadBtn?.addEventListener("click", () => {
+  window.location.reload(); // recarga la página y resetea todo
+});
+
 
 })();
