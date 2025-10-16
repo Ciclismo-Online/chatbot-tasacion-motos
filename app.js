@@ -80,6 +80,7 @@ function prettifyKey(k = "") {
   const errorBox = $("#errorBox");
   const errorMessage = $("#errorMessage");
   const printBtn = $("#printBtn");
+  const reloadBtn = $("#reloadBtn"); 
  
 
   const responseTextEl = $("#responseText");
