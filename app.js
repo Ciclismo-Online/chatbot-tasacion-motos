@@ -31,10 +31,15 @@
   const show = (el) => el && el.removeAttribute("hidden");
   const hide = (el) => el && el.setAttribute("hidden", "");
 
-   // Convierte claves técnicas en etiquetas legibles
+  // Convierte claves técnicas en etiquetas legibles
 function prettifyKey(k = "") {
   if (!k) return "";
-  let s = String(k).trim();
+  const ORIGINAL = String(k).trim();
+
+  // 🔹 Overrides específicos
+  if (ORIGINAL === "coste_reacond") return "Coste Reacondicionado";
+
+  let s = ORIGINAL;
 
   // Sufijos conocidos -> paréntesis
   const pct = s.endsWith("_pct");
