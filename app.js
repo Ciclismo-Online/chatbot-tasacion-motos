@@ -4,6 +4,10 @@
 */
 
 (function () {
+   
+   // Evita que el scroll se mantenga tras recargar la página
+  history.scrollRestoration = "manual";
+   
   // ---------- Utilidades ----------
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
