@@ -356,11 +356,10 @@ if (resultado) {
     }
   });
 
-  // --- Botón "Descargar PDF" ---
-const printBtn = $("#printBtn");
-
+ // --- Botón "Descargar PDF" ---
 printBtn?.addEventListener("click", () => {
   window.print();
 });
+
 
 })();
