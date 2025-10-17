@@ -195,12 +195,14 @@ function prettifyKey(k = "") {
     // Base antes del margen del concesionario
     const base = pvp + ak + aa - cr;
 
-    // Margen: si hay EUR lo usamos, si no, calculamos desde %
-    let margenEur = toNum(e.margen_concesionario_eur, NaN);
-    const margenPct = toNum(e.margen_concesionario_pct, NaN);
-    if (!Number.isFinite(margenEur)) {
-      margenEur = Number.isFinite(margenPct) ? base * (margenPct / 100) : 0;
-    }
+    // Margen: si hay EUR válido y >0 lo usamos, si no, calculamos desde %
+let margenEur = toNum(e.margen_concesionario_eur, NaN);
+const margenPct = toNum(e.margen_concesionario_pct, NaN);
+
+if (!Number.isFinite(margenEur) || margenEur <= 0) {
+  margenEur = Number.isFinite(margenPct) ? base * (margenPct / 100) : 0;
+}
+
 
     const computed = base - margenEur;
 
