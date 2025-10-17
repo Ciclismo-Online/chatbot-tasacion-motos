@@ -57,6 +57,10 @@ function prettifyKey(k = "") {
   if (pct) s += " (%)";
   if (eur) s += " (EUR)";
 
+  // Correcciones específicas de formato
+  if (s.toLowerCase() === "pvp estimado") s = "PVP Estimado";
+  if (s.toLowerCase().startsWith("ajuste km")) s = "Ajuste KM";
+
   return s;
 }
 
