@@ -146,22 +146,79 @@ function prettifyKey(k = "") {
 
     if (!valuation || typeof valuation !== "object") return;
 
-    // Oferta de compra (destacada)
-    if (valuation.oferta_compra) {
-      const ov = valuation.oferta_compra;
-      const valor =
-        ov.valor != null
-          ? formatMoney(ov.valor)
-          : ov.rango
-          ? `${formatMoney(ov.rango.min)} – ${formatMoney(ov.rango.max)}`
-          : "";
-
-      if (valor) {
-        offerValue.textContent = valor;
-        offerNotes.textContent = ov.notas || "";
-        show(offerCard);
-      }
+   // ---- Oferta de compra (destacada) ----
+{
+  // Helpers locales robustos
+  const fmtOffer = (n) => (Number.isFinite(n) ? formatMoney(n) : "");
+  const toNum = (v, def = 0) => {
+    if (v == null) return def;
+    if (typeof v === "number") return Number.isFinite(v) ? v : def;
+    if (typeof v === "object") {
+      if ("valor" in v && Number.isFinite(Number(v.valor))) return Number(v.valor);
+      if ("min" in v && Number.isFinite(Number(v.min))) return Number(v.min);
+      if ("max" in v && Number.isFinite(Number(v.max))) return Number(v.max);
     }
+    const n = Number(v);
+    return Number.isFinite(n) ? n : def;
+  };
+
+  let valor = "";
+  let note = "";
+
+  // 1) Intentar mostrar directamente lo que venga en oferta_compra
+  const ov = valuation.oferta_compra;
+  if (ov != null) {
+    if (typeof ov === "number") {
+      valor = fmtOffer(ov);
+    } else if (typeof ov === "object") {
+      if ("valor" in ov) {
+        valor = fmtOffer(toNum(ov.valor));
+      } else if (ov.rango && (ov.rango.min != null || ov.rango.max != null)) {
+        const min = ov.rango.min != null ? fmtOffer(toNum(ov.rango.min)) : "";
+        const max = ov.rango.max != null ? fmtOffer(toNum(ov.rango.max)) : "";
+        valor = `${min}${min && max ? " – " : ""}${max}`;
+      }
+      if (ov.notas) note = String(ov.notas);
+    }
+  }
+
+  // 2) Fallback: calcular oferta a partir de estimaciones si no ha llegado algo útil
+  if (!valor) {
+    const e = valuation.estimaciones || {};
+    const pvp  = toNum(e.pvp_estimado, 0);
+    const ak   = toNum(e.ajuste_km, 0);
+    const aa   = toNum(e.ajuste_antiguedad, 0);
+
+    // Coste de reacond: siempre RESTA (aseguramos valor absoluto)
+    const cr = Math.abs(toNum(e.coste_reacond, 0));
+
+    // Base antes del margen del concesionario
+    const base = pvp + ak + aa - cr;
+
+    // Margen: si hay EUR lo usamos, si no, calculamos desde %
+    let margenEur = toNum(e.margen_concesionario_eur, NaN);
+    const margenPct = toNum(e.margen_concesionario_pct, NaN);
+    if (!Number.isFinite(margenEur)) {
+      margenEur = Number.isFinite(margenPct) ? base * (margenPct / 100) : 0;
+    }
+
+    const computed = base - margenEur;
+
+    if (Number.isFinite(computed)) {
+      valor = fmtOffer(computed);
+      note = "Oferta estimada a partir del desglose.";
+    }
+  }
+
+  // 3) Pintar tarjeta si tenemos valor
+  if (valor) {
+    offerValue.textContent = valor;
+    offerNotes.textContent = note;
+    show(offerCard);
+  } else {
+    hide(offerCard);
+  }
+}
 
     // Resumen técnico
     if (valuation.resumen) {
