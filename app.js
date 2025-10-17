@@ -294,15 +294,36 @@ if (valuation.estimaciones && typeof valuation.estimaciones === "object") {
   }
 }
 
-    // Supuestos
-    if (Array.isArray(valuation.supuestos) && valuation.supuestos.length) {
-      valuation.supuestos.forEach((s) => {
-        const li = document.createElement("li");
-        li.textContent = String(s);
-        supuestosList.appendChild(li);
-      });
-      show(supuestosWrapper);
+    // --- Supuestos (acepta objeto {estado, extras, provincia} o array) ---
+{
+  hide(supuestosWrapper);
+  supuestosList.innerHTML = "";
+
+  const s = valuation.supuestos;
+
+  if (!s) {
+    // nada que mostrar
+  } else if (Array.isArray(s)) {
+    s.filter(Boolean).forEach((item) => {
+      const li = document.createElement("li");
+      li.textContent = String(item);
+      supuestosList.appendChild(li);
+    });
+  } else if (typeof s === "object") {
+    for (const [k, v] of Object.entries(s)) {
+      if (v == null || String(v).trim() === "") continue;
+      const li = document.createElement("li");
+      // reutilizamos tu helper para etiquetas legibles
+      const label = prettifyKey(k);
+      li.textContent = `${label}: ${v}`;
+      supuestosList.appendChild(li);
     }
+  }
+
+  if (supuestosList.children.length) {
+    show(supuestosWrapper);
+  }
+}
 
     // Notas
     if (Array.isArray(valuation.notas) && valuation.notas.length) {
